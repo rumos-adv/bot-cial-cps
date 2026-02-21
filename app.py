@@ -9,11 +9,11 @@ ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
 
 conversas = {}
 
-# --- ISSO RESOLVE O "PORT SCAN TIMEOUT" ---
+# --- ISSO RESOLVE O ERRO DA TELA DO SEU NOTEBOOK ---
 @app.route("/", methods=['GET'])
 def home():
-    return "Bot da Rumos Advocacia está Online!", 200
-# ------------------------------------------
+    return "Serviço da Rumos Advocacia Online!", 200
+# --------------------------------------------------
 
 @app.route("/webhook", methods=['POST'])
 def whatsapp_bot():
@@ -35,7 +35,7 @@ def whatsapp_bot():
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     answer = messages.data[0].content[0].text.value
 
-    # Delay de humanização de 4 segundos (Seguro para o limite do Twilio)
+    # Delay de humanização fixo de 4 segundos (Seguro e eficaz)
     time.sleep(4) 
 
     resp = MessagingResponse()
