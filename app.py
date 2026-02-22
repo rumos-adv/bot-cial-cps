@@ -6,6 +6,9 @@ from openai import OpenAI
 app = Flask(__name__)
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
+# As chaves que você vai adicionar no Render:
+TWILIO_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 
 conversas = {}
 
@@ -19,25 +22,25 @@ def whatsapp_bot():
     incoming_msg = request.values.get('Body', '').strip()
     media_url = request.values.get('MediaUrl0')
 
-    # 1. WHISPER COM FOCO EM PORTUGUÊS
+    # 1. WHISPER COM AUTENTICAÇÃO DO TWILIO
     if media_url:
         try:
-            audio_data = requests.get(media_url).content
+            # Agora baixamos com a 'chave' (auth) para o Twilio liberar o arquivo
+            audio_data = requests.get(media_url, auth=(TWILIO_SID, TWILIO_TOKEN)).content
             with open("temp_audio.ogg", "wb") as f:
                 f.write(audio_data)
             with open("temp_audio.ogg", "rb") as audio_file:
-                # Adicionamos 'language="pt"' para o Whisper ser mais preciso
                 transcript = client.audio.transcriptions.create(
                     model="whisper-1", 
                     file=audio_file,
-                    language="pt" 
+                    language="pt"
                 )
             incoming_msg = transcript.text
             print(f"O CLIENTE DISSE NO ÁUDIO: {incoming_msg}", flush=True)
             os.remove("temp_audio.ogg")
         except Exception as e:
             print(f"ERRO NO ÁUDIO: {e}", flush=True)
-            incoming_msg = "[Erro ao processar áudio]"
+            incoming_msg = "[O cliente enviou um áudio, mas houve erro técnico. Peça para ele escrever]"
 
     if incoming_msg.upper() == "RESETAR":
         if from_number in conversas:
@@ -62,7 +65,6 @@ def whatsapp_bot():
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     answer = messages.data[0].content[0].text.value
 
-    # --- AGORA VOCÊ VAI VER TUDO NO LOG ---
     print(f"DRA. ANA RESPONDEU: {answer}", flush=True)
 
     time.sleep(1) 
