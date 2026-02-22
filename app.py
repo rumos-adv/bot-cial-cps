@@ -7,50 +7,46 @@ app = Flask(__name__)
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
 
-# Memória do bot (fica logo no início)
+# Memória das conversas
 conversas = {}
 
-# --- ROTA DE SAÚDE (Para o Render não desligar o bot) ---
 @app.route("/", methods=['GET'])
 def home():
-    return "Serviço da Rumos Advocacia está Online!", 200
+    return "Bot Rumos Online", 200
 
-# --- WEBHOOK PRINCIPAL (Onde a mágica acontece) ---
 @app.route("/webhook", methods=['POST'])
 def whatsapp_bot():
     from_number = request.values.get('From', '')
     incoming_msg = request.values.get('Body', '').strip()
     
-    # --- COMANDO SECRETO PARA SEUS TESTES ---
-    # Se você digitar exatamente RESETAR, o bot esquece seu número
+    # Comando para você limpar seus testes
     if incoming_msg.upper() == "RESETAR":
         if from_number in conversas:
             del conversas[from_number]
         resp = MessagingResponse()
-        resp.message("Memória limpa, Rodrigo! Podemos recomeçar o teste do zero.")
+        resp.message("Memória limpa, Rodrigo! Vamos recomeçar.")
         return str(resp)
 
-    # 1. Gerenciamento de Memória (Thread)
     if from_number not in conversas:
         thread = client.beta.threads.create()
         conversas[from_number] = thread.id
     thread_id = conversas[from_number]
 
-    # 2. Envio para OpenAI
     client.beta.threads.messages.create(thread_id=thread_id, role="user", content=incoming_msg)
     run = client.beta.threads.runs.create(thread_id=thread_id, assistant_id=ASSISTANT_ID)
 
-    while run.status != "completed":
-        time.sleep(0.5)
+    # Loop de espera com segurança
+    while run.status not in ["completed", "failed", "cancelled"]:
+        time.sleep(1)
         run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
 
-    # 3. Captura da Resposta
-    messages = client.beta.threads.messages.list(thread_id=thread_id)
-    answer = messages.data[0].content[0].text.value
+    if run.status == "completed":
+        messages = client.beta.threads.messages.list(thread_id=thread_id)
+        answer = messages.data[0].content[0].text.value
+    else:
+        answer = "Desculpe, tive um pequeno problema técnico agora. Pode repetir a mensagem?"
 
-    # 4. Humanização (4 segundos de espera)
-    time.sleep(4) 
-
+    time.sleep(4) # Humanização
     resp = MessagingResponse()
     resp.message(answer)
     return str(resp)
