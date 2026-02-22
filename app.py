@@ -19,7 +19,6 @@ def whatsapp_bot():
     incoming_msg = request.values.get('Body', '').strip()
     media_url = request.values.get('MediaUrl0')
 
-    # 1. TRATAMENTO DE ÁUDIO
     if media_url:
         try:
             audio_data = requests.get(media_url).content
@@ -32,7 +31,6 @@ def whatsapp_bot():
         except:
             incoming_msg = "[Erro ao processar áudio]"
 
-    # 2. COMANDO RESETAR
     if incoming_msg.upper() == "RESETAR":
         if from_number in conversas:
             del conversas[from_number]
@@ -40,7 +38,6 @@ def whatsapp_bot():
         resp.message("Memória limpa, Rodrigo! Dra. Ana pronta para recomeçar.")
         return str(resp)
 
-    # 3. LÓGICA DO ASSISTENTE
     if from_number not in conversas:
         thread = client.beta.threads.create()
         conversas[from_number] = thread.id
@@ -55,10 +52,6 @@ def whatsapp_bot():
 
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     answer = messages.data[0].content[0].text.value
-
-    # --- LINHA DE DEBUG: Isso vai mostrar a resposta no Render ---
-    print(f"DRA. ANA RESPONDEU: {answer}")
-    # -------------------------------------------------------------
 
     time.sleep(1) 
     resp = MessagingResponse()
